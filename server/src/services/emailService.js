@@ -1034,6 +1034,81 @@ export async function sendOtpEmail(email, otp, options = {}) {
   }
 }
 
+
+/**
+ * Sends a booking phone verification code to customer email (if provided)
+ */
+export async function sendBookingPhoneOtpEmail(email, phone, otp, options = {}) {
+  if (!email || !otp) return { success: false, skipped: true };
+
+  const businessName = sanitizeHeader(options.businessName || 'Santosh Hair Art');
+  const subject = `${otp} is your ${businessName} appointment verification code`;
+
+  if (!isEmailConfigured() && !customTransporter) {
+    console.warn(`[EmailService] SMTP not configured. Booking OTP for ${phone}: ${otp}`);
+    return { success: true, devMode: true, otp };
+  }
+
+  try {
+    const transporter = getTransporter();
+    const senderEmail = process.env.GMAIL_USER || 'no-reply@santoshhairart.in';
+
+    const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Appointment Verification</title></head>
+<body style="margin: 0; padding: 24px 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <center>
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 500px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
+      <tr>
+        <td style="background: #18181b; padding: 22px; text-align: center; border-bottom: 3px solid #d4af37;">
+          <h1 style="margin: 0; color: #f4f4f5; font-size: 18px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">
+            ${escapeHtml(businessName)}
+          </h1>
+          <p style="margin: 4px 0 0; color: #d4af37; font-size: 11px; font-weight: 600;">
+            MOBILE NUMBER VERIFICATION
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 26px 20px; text-align: center;">
+          <h2 style="margin: 0 0 10px; font-size: 17px; color: #111827;">Appointment Slot Verification</h2>
+          <p style="margin: 0 0 20px; color: #4b5563; font-size: 13px; line-height: 1.5;">
+            To verify your mobile number (<strong>${escapeHtml(phone)}</strong>) and confirm your appointment, please enter this code:
+          </p>
+          <div style="display: inline-block; background-color: #fafaf9; border: 2px dashed #d4af37; padding: 12px 26px; border-radius: 8px;">
+            <span style="font-family: monospace; font-size: 30px; font-weight: 800; letter-spacing: 6px; color: #18181b;">
+              ${escapeHtml(otp)}
+            </span>
+          </div>
+          <p style="margin: 20px 0 0; color: #71717a; font-size: 11px;">
+            Valid for 10 minutes. Do not share this code with anyone.
+          </p>
+        </td>
+      </tr>
+    </table>
+  </center>
+</body>
+</html>`;
+
+    const textContent = `${businessName} Appointment Verification Code: ${otp}\n\nPlease enter this code to verify your mobile number (${phone}) and confirm your appointment.\n\nExpires in 10 minutes.`;
+
+    const mailOptions = {
+      from: `"${businessName}" <${senderEmail}>`,
+      to: email.trim().toLowerCase(),
+      subject,
+      text: textContent,
+      html: htmlContent
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.info(`[EmailService] Booking phone verification OTP sent to ${email} (Message ID: ${info.messageId || 'sent'})`);
+    return { success: true, messageId: info.messageId };
+  } catch (err) {
+    console.error(`[EmailService] Failed to send booking OTP to ${email}: ${err.message}`);
+    return { success: false, error: err.message };
+  }
+}
+
 export default {
   sendBookingNotification,
   verifySmtpConnection,
@@ -1052,5 +1127,6 @@ export default {
   generateCustomerStatusEmailText,
   sendOtpEmail,
   generateOtpEmailHtml,
-  generateOtpEmailText
+  generateOtpEmailText,
+  sendBookingPhoneOtpEmail
 };

@@ -8,7 +8,7 @@ A production-quality digital web application and real-time appointment booking e
 
 - **Business Name:** Santosh Hair Art
 - **Category:** Hair Salon / Barber Shop / Personal Grooming Studio
-- **Verified Physical Location:** Near ST Bus Station, Chock, Gaffar Belim, Mangrol, Gujarat 362225, India
+- **Verified Physical Location:** Near SBI Bank, Shil, Mangrol, Gujarat, 362240
 - **Maps Listing:** [Google Maps Place](https://maps.app.goo.gl/1NHaQgexgWuvfmq16) (CID: `0x3bfd69b663d0b8a1:0x4552016017509fea`, Place ID: `ChIJobjQY7Zp_TsR6p9QF2ABUkU`)
 - **Coordinates:** `21.1889284° N, 70.0476545° E`
 - **Direct Phone & WhatsApp:** `+91 95378 51649`

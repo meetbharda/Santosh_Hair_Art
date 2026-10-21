@@ -95,7 +95,7 @@ export default function Footer() {
               <div className="flex items-start gap-2.5">
                 <MapPin className="w-4 h-4 text-bronze flex-shrink-0 mt-0.5" />
                 <span className="leading-snug">
-                  Near ST Bus Station, Chock, Gaffar Belim, Mangrol, Gujarat 362225, India
+                  Near SBI Bank, Shil, Mangrol, Gujarat, 362240
                 </span>
               </div>
 

@@ -142,7 +142,7 @@ export default function BookingLookupPage() {
                 <MapPin className="w-4 h-4 text-bronze" />
                 <span>Santosh Hair Art Studio Location</span>
               </div>
-              <p>Near ST Bus Station, Chock, Gaffar Belim, Mangrol, Gujarat 362225</p>
+              <p>Near SBI Bank, Shil, Mangrol, Gujarat, 362240</p>
               <div className="pt-1 flex items-center justify-between">
                 <a
                   href="https://maps.app.goo.gl/1NHaQgexgWuvfmq16"

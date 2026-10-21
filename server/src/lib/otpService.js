@@ -111,8 +111,118 @@ export function clearOtp(email) {
   }
 }
 
+
+/**
+ * In-memory store for Phone OTPs (Appointment Booking)
+ * Key: normalized phone string
+ * Value: { hash, expiresAt, attempts, lastRequestedAt }
+ */
+const phoneOtpStore = new Map();
+
+export function normalizePhoneNumber(phone) {
+  if (!phone) return '';
+  return String(phone).replace(/[\s\-\(\)\.]/g, '');
+}
+
+function cleanExpiredPhoneOtps() {
+  const now = Date.now();
+  for (const [phone, record] of phoneOtpStore.entries()) {
+    if (now > record.expiresAt) {
+      phoneOtpStore.delete(phone);
+    }
+  }
+}
+
+/**
+ * Generates and securely stores a 6-digit OTP for a customer's phone number
+ */
+export function generateAndStorePhoneOtp(phone) {
+  if (!phone) {
+    return { success: false, error: 'Valid phone number is required' };
+  }
+
+  cleanExpiredPhoneOtps();
+  const normalized = normalizePhoneNumber(phone);
+  const existing = phoneOtpStore.get(normalized);
+  const now = Date.now();
+
+  if (existing && now - existing.lastRequestedAt < COOLDOWN_MS) {
+    const remainingSeconds = Math.ceil((COOLDOWN_MS - (now - existing.lastRequestedAt)) / 1000);
+    return {
+      success: false,
+      error: `Please wait ${remainingSeconds}s before requesting a new code.`,
+      remainingCooldown: remainingSeconds
+    };
+  }
+
+  const otp = crypto.randomInt(100000, 1000000).toString();
+  const hash = crypto.createHash('sha256').update(otp).digest('hex');
+
+  phoneOtpStore.set(normalized, {
+    hash,
+    expiresAt: now + OTP_TTL_MS,
+    attempts: 0,
+    lastRequestedAt: now
+  });
+
+  console.info(`[SMS OTP] Generated appointment verification code for ${normalized}: ${otp}`);
+
+  return {
+    success: true,
+    otp,
+    phone: normalized,
+    expiresAt: now + OTP_TTL_MS
+  };
+}
+
+/**
+ * Verifies the 6-digit OTP for a phone number
+ */
+export function verifyPhoneOtp(phone, inputOtp, consume = true) {
+  if (!phone || !inputOtp) return false;
+
+  const normalized = normalizePhoneNumber(phone);
+  const record = phoneOtpStore.get(normalized);
+
+  if (!record) return false;
+
+  const now = Date.now();
+  if (now > record.expiresAt) {
+    phoneOtpStore.delete(normalized);
+    return false;
+  }
+
+  record.attempts += 1;
+  if (record.attempts > MAX_ATTEMPTS) {
+    phoneOtpStore.delete(normalized);
+    return false;
+  }
+
+  const inputHash = crypto.createHash('sha256').update(String(inputOtp).trim()).digest('hex');
+  const isMatch = crypto.timingSafeEqual(Buffer.from(inputHash), Buffer.from(record.hash));
+
+  if (isMatch && consume) {
+    phoneOtpStore.delete(normalized);
+  }
+
+  return isMatch;
+}
+
+/**
+ * Clears an active phone OTP
+ */
+export function clearPhoneOtp(phone) {
+  if (phone) {
+    phoneOtpStore.delete(normalizePhoneNumber(phone));
+  }
+}
+
 export default {
   generateAndStoreOtp,
   verifyRegistrationOtp,
-  clearOtp
+  clearOtp,
+  normalizePhoneNumber,
+  generateAndStorePhoneOtp,
+  verifyPhoneOtp,
+  clearPhoneOtp
 };

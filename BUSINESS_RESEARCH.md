@@ -7,7 +7,7 @@
 | **Business Name** | Santosh Hair Art | Google Maps CID `0x3bfd69b663d0b8a1:0x4552016017509fea` | **Verified** |
 | **Primary Category** | Hair salon / Barber shop / Personal Care | Google Maps (`SearchResult.TYPE_PERSONAL_CARE`) | **Verified** |
 | **Primary Address (Maps)** | SBI Bank Neir, Shil, Gujarat 362240 | Google Maps listing payload (`place?authuser=0&q=Santosh+Hair+Art`) | **Verified** |
-| **Client Prompt Address** | Near ST Bus Station, Chock, Gaffar Belim, Mangrol, Gujarat 362225, India | Client Master Brief (Shil is in Mangrol Taluka, Junagadh District) | **Verified** |
+| **Client Prompt Address** | Near SBI Bank, Shil, Mangrol, Gujarat, 362240 | Client Master Brief (Shil is in Mangrol Taluka, Junagadh District) | **Verified** |
 | **Coordinates** | Latitude: `21.1889284`, Longitude: `70.0476545` | Google Maps Geolocation coordinates | **Verified** |
 | **Place ID / CID** | Place ID: `ChIJobjQY7Zp_TsR6p9QF2ABUkU` <br>CID: `0x3bfd69b663d0b8a1:0x4552016017509fea` (4995056448926949354) | Google Maps place metadata preview | **Verified** |
 | **Feature ID / mid** | `/g/11sk4t5ggk` | Google Maps entity identifier | **Verified** |

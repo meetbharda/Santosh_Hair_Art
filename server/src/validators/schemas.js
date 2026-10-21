@@ -66,7 +66,36 @@ export const createBookingSchema = z.object({
       return val === null ? undefined : val;
     },
     z.string().max(500, 'Notes cannot exceed 500 characters').optional()
+  ),
+  phoneOtp: z.string().regex(/^\d{6}$/, 'Verification code must be a 6-digit number').optional()
+});
+
+export const sendBookingOtpSchema = z.object({
+  customerPhone: z.preprocess(
+    val => (typeof val === 'string' ? val.trim() : val),
+    z.string({ required_error: 'Phone number is required' })
+      .transform(v => v.replace(/[\s\-\(\)\.]/g, ''))
+      .refine(v => {
+        return /^(\+?91|0)?[6-9]\d{9}$/.test(v) || /^\+?[1-9]\d{9,14}$/.test(v) || /^\d{10}$/.test(v);
+      }, {
+        message: 'Please enter a valid mobile number (at least 10 digits)'
+      })
+  ),
+  customerEmail: z.preprocess(
+    val => {
+      if (typeof val === 'string') {
+        const trimmed = val.trim();
+        return trimmed === '' ? undefined : trimmed;
+      }
+      return val === null ? undefined : val;
+    },
+    z.string().email('Invalid email format').optional()
   )
+});
+
+export const verifyBookingOtpSchema = z.object({
+  customerPhone: z.string().min(10, 'Valid phone number required'),
+  otp: z.string().regex(/^\d{6}$/, 'Verification code must be a 6-digit number')
 });
 
 export const enquirySchema = z.object({

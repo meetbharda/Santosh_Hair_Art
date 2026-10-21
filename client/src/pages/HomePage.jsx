@@ -105,8 +105,8 @@ export default function HomePage() {
                 <MapPin className="w-5 h-5" />
               </div>
               <div>
-                <span className="block font-bold text-ivory text-sm">Near ST Bus Station</span>
-                <span className="block text-xs text-ivory/50">Central Mangrol Chock</span>
+                <span className="block font-bold text-ivory text-sm">Near SBI Bank</span>
+                <span className="block text-xs text-ivory/50">Shil, 362240</span>
               </div>
             </div>
 
@@ -393,11 +393,11 @@ export default function HomePage() {
               </div>
 
               <h2 className="font-serif text-3xl sm:text-4xl font-bold text-ivory leading-tight">
-                Conveniently Located Near ST Bus Station
+                Conveniently Located Near SBI Bank, Shil
               </h2>
 
               <p className="text-sm sm:text-base text-ivory/70 leading-relaxed">
-                Whether you live in Mangrol, Shil, or neighboring talukas of Junagadh, our salon is easy to reach right in the ST Bus Stand Chowk / Gaffar Belim area.
+                Whether you live in Mangrol, Shil, or neighboring talukas of Junagadh, our salon is easy to reach right near SBI Bank in Shil.
               </p>
 
               <div className="space-y-3 pt-2 text-sm text-ivory/80">
@@ -444,7 +444,7 @@ export default function HomePage() {
                   Santosh Hair Art
                 </p>
                 <p className="text-xs text-ivory/60 mb-4">
-                  Near ST Bus Station, Chock, Gaffar Belim, Mangrol, Gujarat 362225
+                  Near SBI Bank, Shil, Mangrol, Gujarat, 362240
                 </p>
                 <div className="text-xs space-y-1 text-ivory/70 bg-charcoal-800 p-3 rounded-lg border border-white/5 font-mono">
                   <div>Latitude: 21.1889284° N</div>

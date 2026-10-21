@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import {
   Scissors,
+  Smartphone,
+  X,
   Calendar as CalendarIcon,
   Clock,
   User,
@@ -49,6 +51,22 @@ export default function BookingPage() {
   // Submission & Result states
   const [submitting, setSubmitting] = useState(false);
   const [bookingResult, setBookingResult] = useState(null);
+
+  // Mobile OTP states for booking confirmation
+  const [phoneOtpModalOpen, setPhoneOtpModalOpen] = useState(false);
+  const [phoneOtp, setPhoneOtp] = useState('');
+  const [sendingPhoneOtp, setSendingPhoneOtp] = useState(false);
+  const [phoneOtpCooldown, setPhoneOtpCooldown] = useState(0);
+  const [devPhoneOtp, setDevPhoneOtp] = useState('');
+
+  // Mobile OTP cooldown timer
+  useEffect(() => {
+    if (phoneOtpCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setPhoneOtpCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [phoneOtpCooldown]);
 
   // 1. Fetch Services
   useEffect(() => {
@@ -113,16 +131,51 @@ export default function BookingPage() {
     }
   };
 
-  // Final booking submission
-  const handleConfirmBooking = async (e) => {
-    e.preventDefault();
+  // Send mobile OTP before confirming booking
+  const handleRequestPhoneOtp = async (e) => {
+    if (e) e.preventDefault();
     if (!selectedSlot) {
       toast.error('Please select an appointment time slot.');
       return;
     }
 
-    if (!customerName.trim() || !customerPhone.trim()) {
-      toast.error('Name and phone number are required.');
+    if (!customerName.trim()) {
+      toast.error('Please enter your full name.');
+      return;
+    }
+
+    const cleanPhone = customerPhone.replace(/[\s\-\(\)\.]/g, '');
+    if (!cleanPhone || cleanPhone.length < 10) {
+      toast.error('Please enter a valid mobile number (at least 10 digits).');
+      return;
+    }
+
+    setSendingPhoneOtp(true);
+    try {
+      const res = await fetchApi('/public/bookings/send-phone-otp', {
+        method: 'POST',
+        body: JSON.stringify({
+          customerPhone: customerPhone.trim(),
+          customerEmail: customerEmail.trim() || undefined
+        })
+      });
+
+      setDevPhoneOtp(res.data?.devOtp || '');
+      setPhoneOtpModalOpen(true);
+      setPhoneOtpCooldown(30);
+      toast.success(res.message || 'Verification code sent to ' + customerPhone);
+    } catch (err) {
+      toast.error(err.message || 'Could not send verification code. Please check your number.');
+    } finally {
+      setSendingPhoneOtp(false);
+    }
+  };
+
+  // Final booking submission with verified OTP
+  const handleConfirmBookingWithOtp = async (e) => {
+    if (e) e.preventDefault();
+    if (!phoneOtp.trim() || phoneOtp.trim().length !== 6) {
+      toast.error('Please enter the 6-digit verification code.');
       return;
     }
 
@@ -134,7 +187,8 @@ export default function BookingPage() {
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
         customerEmail: customerEmail.trim() || undefined,
-        notes: notes.trim() || undefined
+        notes: notes.trim() || undefined,
+        phoneOtp: phoneOtp.trim()
       };
 
       const res = await fetchApi('/public/bookings', {
@@ -144,18 +198,20 @@ export default function BookingPage() {
 
       if (res.success && res.data) {
         setBookingResult(res.data);
+        setPhoneOtpModalOpen(false);
         setStep(4); // Success step
-        toast.success('Appointment booked successfully!');
+        toast.success('Appointment booked and verified successfully!');
       }
     } catch (err) {
       if (err.code === 'SLOT_CONFLICT') {
         toast.error('That slot was just booked by another customer! Please pick a new slot.');
+        setPhoneOtpModalOpen(false);
         setStep(2); // Send back to slot picker
       } else {
         const detailMessage = Array.isArray(err.details) && err.details.length > 0
           ? err.details.map((d) => d.message).join(' • ')
           : null;
-        toast.error(detailMessage || err.message || 'Booking submission failed. Please verify your details.');
+        toast.error(detailMessage || err.message || 'Booking submission failed. Please check your verification code.');
       }
     } finally {
       setSubmitting(false);
@@ -435,7 +491,7 @@ export default function BookingPage() {
 
       {/* STEP 3: CUSTOMER DETAILS & BOOKING SUMMARY */}
       {step === 3 && (
-        <form onSubmit={handleConfirmBooking} className="space-y-8 animate-fade-in">
+        <form onSubmit={handleRequestPhoneOtp} className="space-y-8 animate-fade-in">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="font-serif text-3xl sm:text-4xl font-bold text-ivory">
@@ -574,7 +630,7 @@ export default function BookingPage() {
                   className="w-full flex items-center justify-center gap-2 py-4 px-6 rounded-xl bg-bronze text-charcoal-900 font-bold text-sm hover:bg-bronze-light transition shadow-xl shadow-bronze/10 disabled:opacity-50"
                 >
                   <CheckCircle2 className="w-5 h-5" />
-                  <span>{submitting ? 'Reserving Slot...' : 'Confirm Appointment'}</span>
+                  <span>{sendingPhoneOtp ? 'Sending Verification Code...' : 'Verify Mobile & Confirm Appointment'}</span>
                 </button>
               </div>
             </div>
@@ -644,7 +700,7 @@ export default function BookingPage() {
             <div className="flex justify-between">
               <span className="text-ivory/60">Location:</span>
               <span className="font-medium text-ivory text-right">
-                Near ST Bus Station, Gaffar Belim, Mangrol
+                Near SBI Bank, Shil, Mangrol, Gujarat, 362240
               </span>
             </div>
           </div>
@@ -665,7 +721,95 @@ export default function BookingPage() {
           </div>
         </div>
       )}
+      {/* Mobile OTP Verification Modal */}
+      {phoneOtpModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-charcoal-800 rounded-3xl border border-bronze/30 p-6 sm:p-8 max-w-md w-full space-y-6 shadow-2xl animate-fade-in relative">
+            <button
+              onClick={() => setPhoneOtpModalOpen(false)}
+              className="absolute top-5 right-5 text-ivory/40 hover:text-ivory"
+            >
+              <X className="w-5 h-5" />
+            </button>
 
+            <div className="text-center space-y-2">
+              <div className="w-14 h-14 rounded-2xl bg-bronze/10 border border-bronze/30 flex items-center justify-center text-bronze mx-auto">
+                <Smartphone className="w-7 h-7" />
+              </div>
+              <h3 className="font-serif text-2xl font-bold text-ivory">
+                Verify Mobile Number
+              </h3>
+              <p className="text-xs text-ivory/60">
+                Please enter the 6-digit verification code sent to <strong className="text-bronze font-mono">{customerPhone}</strong> to confirm your slot.
+              </p>
+            </div>
+
+            {devPhoneOtp && (
+              <div className="bg-charcoal-900 border border-bronze/30 rounded-xl p-3 text-center space-y-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-bronze">
+                  Verification Code
+                </span>
+                <div className="font-mono text-xl font-bold text-ivory tracking-[6px]">
+                  {devPhoneOtp}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPhoneOtp(devPhoneOtp)}
+                  className="text-[11px] text-bronze hover:underline block mx-auto pt-1"
+                >
+                  Click to auto-fill code
+                </button>
+              </div>
+            )}
+
+            <form onSubmit={handleConfirmBookingWithOtp} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-ivory/80 mb-2 text-center">
+                  Enter 6-Digit OTP Code
+                </label>
+                <input
+                  type="text"
+                  maxLength={6}
+                  required
+                  autoFocus
+                  value={phoneOtp}
+                  onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, ''))}
+                  placeholder="• • • • • •"
+                  className="w-full tracking-[8px] text-center text-2xl font-mono py-3.5 bg-charcoal-900 border border-white/20 rounded-xl text-ivory focus:outline-none focus:border-bronze"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={submitting || phoneOtp.length !== 6}
+                className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-bronze text-charcoal-900 font-bold text-sm hover:bg-bronze-light transition disabled:opacity-50 shadow-lg"
+              >
+                <span>{submitting ? 'Confirming Appointment...' : 'Verify & Confirm Appointment'}</span>
+                <CheckCircle2 className="w-4 h-4" />
+              </button>
+
+              <div className="flex items-center justify-between text-xs pt-1">
+                <button
+                  type="button"
+                  onClick={() => setPhoneOtpModalOpen(false)}
+                  className="text-ivory/50 hover:text-ivory underline"
+                >
+                  Edit details
+                </button>
+
+                <button
+                  type="button"
+                  disabled={phoneOtpCooldown > 0 || sendingPhoneOtp}
+                  onClick={() => handleRequestPhoneOtp()}
+                  className="text-bronze hover:underline disabled:opacity-40"
+                >
+                  {phoneOtpCooldown > 0 ? `Resend in ${phoneOtpCooldown}s` : sendingPhoneOtp ? 'Sending...' : 'Resend code'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

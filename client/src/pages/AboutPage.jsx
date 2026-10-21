@@ -129,7 +129,7 @@ export default function AboutPage() {
               Where exactly are you located in Mangrol?
             </h4>
             <p className="text-ivory/70 leading-relaxed">
-              We are located near the ST Bus Station / Bus Stand Chock in Gaffar Belim, Mangrol, Gujarat (Pin Code 362225). Accessible easily on foot or by vehicle.
+              We are located near SBI Bank in Shil, Mangrol, Gujarat (Pin Code 362240). Accessible easily on foot or by vehicle.
             </p>
           </div>
 

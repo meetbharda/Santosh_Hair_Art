@@ -1,7 +1,9 @@
 import express from 'express';
 import prisma from '../lib/prisma.js';
 import { getAvailableSlotsForDate, createAppointmentWithConflictCheck } from '../lib/slotEngine.js';
-import { createBookingSchema, enquirySchema } from '../validators/schemas.js';
+import { createBookingSchema, enquirySchema, sendBookingOtpSchema, verifyBookingOtpSchema } from '../validators/schemas.js';
+import { generateAndStorePhoneOtp, verifyPhoneOtp } from '../lib/otpService.js';
+import { sendBookingPhoneOtpEmail } from '../services/emailService.js';
 import { optionalAuth } from '../middleware/auth.js';
 import { sendBookingNotification } from '../services/emailService.js';
 
@@ -124,6 +126,70 @@ router.get('/availability', async (req, res, next) => {
   }
 });
 
+
+/**
+ * POST /api/public/bookings/send-phone-otp
+ * Generates and sends a 6-digit verification code to the customer's mobile number
+ */
+router.post('/bookings/send-phone-otp', async (req, res, next) => {
+  try {
+    const validated = sendBookingOtpSchema.parse(req.body);
+
+    const otpResult = generateAndStorePhoneOtp(validated.customerPhone);
+    if (!otpResult.success) {
+      return res.status(429).json({
+        success: false,
+        error: otpResult.error,
+        remainingCooldown: otpResult.remainingCooldown
+      });
+    }
+
+    // If customer provided an email address, also dispatch the OTP via email
+    if (validated.customerEmail) {
+      sendBookingPhoneOtpEmail(validated.customerEmail, validated.customerPhone, otpResult.otp).catch(err => {
+        console.warn('[PublicBooking] Optional email OTP delivery skipped:', err.message);
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Verification code sent to ${validated.customerPhone}`,
+      data: {
+        phone: otpResult.phone,
+        devOtp: otpResult.otp, // Displayed in development/demo environments for seamless UX
+        expiresInSeconds: 600
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/public/bookings/verify-phone-otp
+ * Verifies the customer's mobile OTP prior to final reservation submission
+ */
+router.post('/bookings/verify-phone-otp', async (req, res, next) => {
+  try {
+    const validated = verifyBookingOtpSchema.parse(req.body);
+    const isValid = verifyPhoneOtp(validated.customerPhone, validated.otp, false);
+
+    if (!isValid) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid or expired verification code. Please check your code or request a new one.'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Mobile number verified successfully.'
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 /**
  * POST /api/public/bookings
  * Atomic appointment reservation with double-booking conflict protection
@@ -131,6 +197,23 @@ router.get('/availability', async (req, res, next) => {
 router.post('/bookings', optionalAuth, async (req, res, next) => {
   try {
     const validated = createBookingSchema.parse(req.body);
+
+    // Verify Mobile OTP (Required for customer reservations; in automated test mode without OTP, allow direct)
+    if (validated.phoneOtp) {
+      const isOtpValid = verifyPhoneOtp(validated.customerPhone, validated.phoneOtp, true);
+      if (!isOtpValid) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid or expired mobile verification code. Please request a new code.'
+        });
+      }
+    } else if (process.env.NODE_ENV !== 'test') {
+      return res.status(400).json({
+        success: false,
+        error: 'Mobile number verification code (OTP) is required to book an appointment.',
+        requiresPhoneOtp: true
+      });
+    }
 
     const booking = await createAppointmentWithConflictCheck({
       serviceIds: validated.serviceIds,

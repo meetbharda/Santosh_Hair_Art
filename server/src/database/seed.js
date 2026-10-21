@@ -17,7 +17,7 @@ async function main() {
       phoneNumber: '+91 95378 51649',
       whatsappNumber: '+91 95378 51649',
       email: 'contact@santoshhairart.in',
-      address: 'Near ST Bus Station, Chock, Gaffar Belim, Mangrol, Gujarat 362225, India',
+      address: 'Near SBI Bank, Shil, Mangrol, Gujarat, 362240',
       googleMapsUrl: 'https://maps.app.goo.gl/1NHaQgexgWuvfmq16',
       latitude: 21.1889284,
       longitude: 70.0476545,

@@ -84,7 +84,7 @@ export default function ContactPage() {
                 <div>
                   <span className="block font-bold text-ivory">Address</span>
                   <span className="block text-ivory/70 text-xs leading-relaxed mt-0.5">
-                    Near ST Bus Station, Chock, Gaffar Belim, Mangrol, Gujarat 362225, India
+                    Near SBI Bank, Shil, Mangrol, Gujarat, 362240
                   </span>
                   <a
                     href={mapsUrl}
