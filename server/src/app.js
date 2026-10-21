@@ -13,6 +13,9 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
 const app = express();
 
+// Trust reverse proxy (Vercel, Render, AWS, Cloudflare)
+app.set('trust proxy', 1);
+
 // Security HTTP headers
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' }
@@ -54,6 +57,7 @@ const authLimiter = rateLimit({
   max: 30, // 30 requests per window
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false },
   message: { success: false, error: 'Too many requests. Please try again after 15 minutes.' }
 });
 
