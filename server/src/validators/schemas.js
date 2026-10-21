@@ -4,7 +4,17 @@ export const registerSchema = z.object({
   email: z.string().email('Invalid email address').toLowerCase().trim(),
   password: z.string().min(8, 'Password must be at least 8 characters long'),
   fullName: z.string().min(2, 'Full name must be at least 2 characters').trim(),
-  phoneNumber: z.string().min(10, 'Valid mobile number required').trim()
+  phoneNumber: z.string().min(10, 'Valid mobile number required').trim(),
+  otp: z.string().regex(/^\d{6}$/, 'Verification code must be a 6-digit number').optional()
+});
+
+export const sendOtpSchema = z.object({
+  email: z.string().email('Invalid email address').toLowerCase().trim()
+});
+
+export const verifyOtpSchema = z.object({
+  email: z.string().email('Invalid email address').toLowerCase().trim(),
+  otp: z.string().regex(/^\d{6}$/, 'Verification code must be a 6-digit number')
 });
 
 export const loginSchema = z.object({
@@ -23,15 +33,40 @@ export const resetPasswordSchema = z.object({
 
 export const createBookingSchema = z.object({
   serviceIds: z.array(z.string().min(1, 'Invalid service ID')).min(1, 'Select at least one service'),
-  startTimeIso: z.string().datetime('Valid start time ISO format required'),
-  customerName: z.string().min(2, 'Full name is required').trim(),
-  customerPhone: z.string()
-    .transform(v => v.replace(/[\s\-\(\)]/g, ''))
-    .refine(v => /^(\+91|0)?[6-9]\d{9}$/.test(v), {
-      message: 'Please enter a valid 10-digit mobile number'
-    }),
-  customerEmail: z.string().email('Invalid email format').optional().or(z.literal('')),
-  notes: z.string().max(500, 'Notes cannot exceed 500 characters').optional()
+  startTimeIso: z.string().refine(val => !isNaN(Date.parse(val)), {
+    message: 'Valid start time format required'
+  }),
+  customerName: z.string().min(2, 'Full name is required (at least 2 characters)').trim(),
+  customerPhone: z.preprocess(
+    val => (typeof val === 'string' ? val.trim() : val),
+    z.string({ required_error: 'Phone number is required' })
+      .transform(v => v.replace(/[\s\-\(\)\.]/g, ''))
+      .refine(v => {
+        return /^(\+?91|0)?[6-9]\d{9}$/.test(v) || /^\+?[1-9]\d{9,14}$/.test(v) || /^\d{10}$/.test(v);
+      }, {
+        message: 'Please enter a valid mobile number (at least 10 digits)'
+      })
+  ),
+  customerEmail: z.preprocess(
+    val => {
+      if (typeof val === 'string') {
+        const trimmed = val.trim();
+        return trimmed === '' ? undefined : trimmed;
+      }
+      return val === null ? undefined : val;
+    },
+    z.string().email('Invalid email format').optional()
+  ),
+  notes: z.preprocess(
+    val => {
+      if (typeof val === 'string') {
+        const trimmed = val.trim();
+        return trimmed === '' ? undefined : trimmed;
+      }
+      return val === null ? undefined : val;
+    },
+    z.string().max(500, 'Notes cannot exceed 500 characters').optional()
+  )
 });
 
 export const enquirySchema = z.object({
@@ -48,7 +83,7 @@ export const updateBookingStatusSchema = z.object({
 });
 
 export const rescheduleBookingSchema = z.object({
-  newStartTimeIso: z.string().datetime('Valid start time required')
+  newStartTimeIso: z.string().refine(val => !isNaN(Date.parse(val)), { message: 'Valid start time required' })
 });
 
 export const serviceUpsertSchema = z.object({

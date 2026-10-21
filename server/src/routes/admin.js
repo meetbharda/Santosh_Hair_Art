@@ -1,6 +1,7 @@
 import express from 'express';
 import { startOfDay, endOfDay, subDays, addDays, parseISO, addMinutes } from 'date-fns';
 import prisma from '../lib/prisma.js';
+import { verifySmtpConnection, sendTestEmail, sendCustomerBookingStatusNotification } from '../services/emailService.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import {
   serviceUpsertSchema,
@@ -233,6 +234,13 @@ router.patch('/bookings/:id', async (req, res, next) => {
         })
       }
     });
+
+    // Notify customer via email if status changed to CANCELLED or COMPLETED
+    if (booking.status !== validated.status && (validated.status === 'CANCELLED' || validated.status === 'COMPLETED')) {
+      sendCustomerBookingStatusNotification(updated, validated.status).catch(emailErr => {
+        console.error(`[AdminBooking] Error sending status email for ${booking.bookingReference}: ${emailErr.message}`);
+      });
+    }
 
     res.json({
       success: true,
@@ -648,6 +656,48 @@ router.get('/audit-logs', async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+
+/**
+ * GET /api/admin/email/verify
+ * Verifies Gmail SMTP connectivity and authentication without creating appointments or sending messages
+ */
+router.get('/email/verify', async (req, res) => {
+  const result = await verifySmtpConnection();
+  if (!result.success) {
+    return res.status(400).json({
+      success: false,
+      error: result.error
+    });
+  }
+  res.json({
+    success: true,
+    message: result.message
+  });
+});
+
+/**
+ * POST /api/admin/email/test
+ * Explicitly sends a sample test email to verify end-to-end delivery
+ */
+router.post('/email/test', async (req, res) => {
+  const targetEmail = req.body?.recipient;
+  const result = await sendTestEmail(targetEmail);
+  if (!result.success) {
+    return res.status(500).json({
+      success: false,
+      error: result.error
+    });
+  }
+  res.json({
+    success: true,
+    message: `Test notification successfully sent to ${result.recipient}`,
+    data: {
+      messageId: result.messageId,
+      recipient: result.recipient
+    }
+  });
 });
 
 export default router;

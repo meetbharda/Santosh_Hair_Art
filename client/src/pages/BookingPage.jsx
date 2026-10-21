@@ -152,7 +152,10 @@ export default function BookingPage() {
         toast.error('That slot was just booked by another customer! Please pick a new slot.');
         setStep(2); // Send back to slot picker
       } else {
-        toast.error(err.message || 'Booking submission failed. Please verify your details.');
+        const detailMessage = Array.isArray(err.details) && err.details.length > 0
+          ? err.details.map((d) => d.message).join(' • ')
+          : null;
+        toast.error(detailMessage || err.message || 'Booking submission failed. Please verify your details.');
       }
     } finally {
       setSubmitting(false);

@@ -12,9 +12,10 @@ export function errorHandler(err, req, res, next) {
       field: i.path.join('.'),
       message: i.message
     }));
+    const messageSummary = issues.map(i => i.message).filter(Boolean).join(', ');
     return res.status(400).json({
       success: false,
-      error: 'Validation failed',
+      error: messageSummary ? `Validation failed: ${messageSummary}` : 'Validation failed',
       details: issues
     });
   }

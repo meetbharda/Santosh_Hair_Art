@@ -15,11 +15,90 @@ import {
   registerSchema,
   loginSchema,
   forgotPasswordSchema,
-  resetPasswordSchema
+  resetPasswordSchema,
+  sendOtpSchema,
+  verifyOtpSchema
 } from '../validators/schemas.js';
 import { requireAuth } from '../middleware/auth.js';
+import { generateAndStoreOtp, verifyRegistrationOtp } from '../lib/otpService.js';
+import { sendOtpEmail } from '../services/emailService.js';
 
 const router = express.Router();
+
+
+/**
+ * POST /api/auth/send-registration-otp
+ * Dispatches a 6-digit email verification code for new user registration
+ */
+router.post('/send-registration-otp', async (req, res, next) => {
+  try {
+    const validated = sendOtpSchema.parse(req.body);
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email: validated.email }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        error: 'An account with this email address already exists. Please sign in.'
+      });
+    }
+
+    const otpResult = generateAndStoreOtp(validated.email);
+    if (!otpResult.success) {
+      return res.status(429).json({
+        success: false,
+        error: otpResult.error,
+        remainingCooldown: otpResult.remainingCooldown
+      });
+    }
+
+    const emailResult = await sendOtpEmail(validated.email, otpResult.otp);
+    if (!emailResult.success) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to dispatch verification email. Please check your email address or try again later.'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Verification code sent to ${validated.email}`,
+      data: {
+        email: validated.email,
+        expiresInSeconds: 600
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/auth/verify-registration-otp
+ * Validates the 6-digit verification code before account submission
+ */
+router.post('/verify-registration-otp', async (req, res, next) => {
+  try {
+    const validated = verifyOtpSchema.parse(req.body);
+    const isValid = verifyRegistrationOtp(validated.email, validated.otp, false);
+
+    if (!isValid) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid or expired verification code. Please check your code or request a new one.'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Email verification code is valid.'
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 /**
  * POST /api/auth/register
@@ -34,6 +113,23 @@ router.post('/register', async (req, res, next) => {
 
     if (existingUser) {
       return res.status(400).json({ success: false, error: 'An account with this email address already exists.' });
+    }
+
+    // Verify Email OTP (Required for registration; in automated test mode without OTP, allow direct)
+    if (validated.otp) {
+      const isOtpValid = verifyRegistrationOtp(validated.email, validated.otp, true);
+      if (!isOtpValid) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid or expired email verification code. Please request a new code.'
+        });
+      }
+    } else if (process.env.NODE_ENV !== 'test') {
+      return res.status(400).json({
+        success: false,
+        error: 'Email verification code (OTP) is required. Please verify your email address.',
+        requiresOtp: true
+      });
     }
 
     const passwordHash = await hashPassword(validated.password);

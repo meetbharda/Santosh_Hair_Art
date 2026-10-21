@@ -3,6 +3,7 @@ import prisma from '../lib/prisma.js';
 import { getAvailableSlotsForDate, createAppointmentWithConflictCheck } from '../lib/slotEngine.js';
 import { createBookingSchema, enquirySchema } from '../validators/schemas.js';
 import { optionalAuth } from '../middleware/auth.js';
+import { sendBookingNotification } from '../services/emailService.js';
 
 const router = express.Router();
 
@@ -141,6 +142,16 @@ router.post('/bookings', optionalAuth, async (req, res, next) => {
       userId: req.user ? req.user.id : null
     });
 
+    // Safely dispatch email notification to barber owner
+    // An email delivery failure will NOT cause the customer's successful booking to fail
+    let notificationResult = null;
+    try {
+      notificationResult = await sendBookingNotification(booking);
+    } catch (emailErr) {
+      console.error('[PublicBooking] Unexpected error dispatching email notification:', emailErr.message);
+      notificationResult = { success: false, error: emailErr.message };
+    }
+
     res.status(201).json({
       success: true,
       message: 'Appointment booked successfully!',
@@ -152,7 +163,8 @@ router.post('/bookings', optionalAuth, async (req, res, next) => {
         totalPricePaise: booking.totalPricePaise,
         totalDurationMinutes: booking.totalDurationMinutes,
         status: booking.status,
-        services: booking.bookingServices
+        services: booking.bookingServices,
+        notificationStatus: notificationResult?.success ? 'sent' : 'failed'
       }
     });
   } catch (err) {
