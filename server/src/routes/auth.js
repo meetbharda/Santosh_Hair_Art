@@ -65,7 +65,8 @@ router.post('/register', async (req, res, next) => {
         id: user.id,
         email: user.email,
         role: user.role,
-        profile: user.profile
+        profile: user.profile,
+        token: sessionToken
       }
     });
   } catch (err) {
@@ -104,7 +105,8 @@ router.post('/login', async (req, res, next) => {
         id: user.id,
         email: user.email,
         role: user.role,
-        profile: user.profile
+        profile: user.profile,
+        token: sessionToken
       }
     });
   } catch (err) {
@@ -117,7 +119,8 @@ router.post('/login', async (req, res, next) => {
  */
 router.post('/logout', async (req, res, next) => {
   try {
-    const token = req.cookies?.[SESSION_COOKIE_NAME];
+    const token = req.cookies?.[SESSION_COOKIE_NAME] ||
+      (req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.slice(7) : null);
     if (token) {
       await invalidateSession(token);
     }

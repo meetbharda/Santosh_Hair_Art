@@ -8,6 +8,11 @@ export async function fetchApi(endpoint, options = {}) {
     ...(options.headers || {})
   };
 
+  const storedToken = typeof window !== 'undefined' ? localStorage.getItem('sha_token') : null;
+  if (storedToken && !headers['Authorization']) {
+    headers['Authorization'] = `Bearer ${storedToken}`;
+  }
+
   const response = await fetch(url, {
     ...options,
     headers,

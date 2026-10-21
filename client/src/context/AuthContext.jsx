@@ -33,6 +33,9 @@ export function AuthProvider({ children }) {
       body: JSON.stringify({ email, password })
     });
     if (res.success) {
+      if (res.data?.token) {
+        localStorage.setItem('sha_token', res.data.token);
+      }
       setUser(res.data);
     }
     return res;
@@ -44,6 +47,9 @@ export function AuthProvider({ children }) {
       body: JSON.stringify(data)
     });
     if (res.success) {
+      if (res.data?.token) {
+        localStorage.setItem('sha_token', res.data.token);
+      }
       setUser(res.data);
     }
     return res;
@@ -53,6 +59,7 @@ export function AuthProvider({ children }) {
     try {
       await fetchApi('/auth/logout', { method: 'POST' });
     } finally {
+      localStorage.removeItem('sha_token');
       setUser(null);
     }
   };

@@ -53,7 +53,27 @@ export default function AdminDashboardPage() {
     );
   }
 
+  if (!data) {
+    return (
+      <div className="bg-charcoal-800 p-8 rounded-2xl border border-white/5 text-center space-y-4 max-w-lg mx-auto mt-12">
+        <AlertCircle className="w-10 h-10 text-amber-400 mx-auto" />
+        <h2 className="font-serif text-xl font-bold text-ivory">Unable to Load Dashboard</h2>
+        <p className="text-xs text-ivory/60">
+          Your session may have expired or dashboard metrics could not be retrieved.
+        </p>
+        <button
+          onClick={loadDashboard}
+          className="px-5 py-2.5 rounded-lg bg-bronze text-charcoal-900 font-bold text-xs hover:bg-bronze-light transition"
+        >
+          Retry Loading
+        </button>
+      </div>
+    );
+  }
+
   const metrics = data?.metrics || {};
+  const popularServices = data?.popularServices || [];
+  const recentBookings = data?.recentBookings || [];
 
   return (
     <div className="space-y-8">
@@ -128,10 +148,10 @@ export default function AdminDashboardPage() {
           </h3>
 
           <div className="space-y-3">
-            {data?.popularServices?.length === 0 ? (
+            {popularServices.length === 0 ? (
               <p className="text-xs text-ivory/40">No service booking data yet.</p>
             ) : (
-              data.popularServices.map((ps) => (
+              popularServices.map((ps) => (
                 <div key={ps.name} className="flex items-center justify-between text-xs py-1.5 border-b border-white/5 last:border-0">
                   <span className="text-ivory/80 font-medium truncate max-w-[200px]">{ps.name}</span>
                   <span className="px-2 py-0.5 rounded-full bg-bronze/10 text-bronze font-bold text-[11px]">
@@ -215,7 +235,7 @@ export default function AdminDashboardPage() {
           </Link>
         </div>
 
-        {data?.recentBookings?.length === 0 ? (
+        {recentBookings.length === 0 ? (
           <p className="text-xs text-ivory/40 py-8 text-center">No bookings recorded yet.</p>
         ) : (
           <div className="overflow-x-auto">
@@ -232,7 +252,7 @@ export default function AdminDashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {data.recentBookings.map((b) => (
+                {recentBookings.map((b) => (
                   <tr key={b.id} className="hover:bg-charcoal-700/50 transition">
                     <td className="py-3 font-mono font-bold text-bronze">{b.bookingReference}</td>
                     <td className="py-3 font-semibold text-ivory">{b.customerName}</td>

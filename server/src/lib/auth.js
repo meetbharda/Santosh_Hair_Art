@@ -75,7 +75,7 @@ export function setSessionCookie(res, token, expiresAt) {
   res.cookie(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'strict' : 'lax',
+    sameSite: isProduction ? 'none' : 'lax',
     expires: expiresAt,
     path: '/'
   });
@@ -86,7 +86,7 @@ export function clearSessionCookie(res) {
   res.clearCookie(SESSION_COOKIE_NAME, {
     httpOnly: true,
     secure: isProduction,
-    sameSite: isProduction ? 'strict' : 'lax',
+    sameSite: isProduction ? 'none' : 'lax',
     path: '/'
   });
 }
