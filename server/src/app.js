@@ -19,9 +19,25 @@ app.use(helmet({
 }));
 
 // CORS configuration
-const frontendOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
+const configuredOrigins = (process.env.FRONTEND_URL || '')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+
+const defaultAllowedOrigins = [
+  ...configuredOrigins,
+  'http://localhost:5173',
+  'http://127.0.0.1:5173'
+];
+
 app.use(cors({
-  origin: [frontendOrigin, 'http://localhost:5173', 'http://127.0.0.1:5173'],
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (defaultAllowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
@@ -39,6 +55,15 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: 'Too many requests. Please try again after 15 minutes.' }
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    name: 'Santosh Hair Art API',
+    status: 'online',
+    health: '/api/health'
+  });
 });
 
 // Mount Routes
